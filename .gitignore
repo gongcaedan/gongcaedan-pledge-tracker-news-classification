@@ -1,0 +1,17 @@
+# 가상환경
+.venv/
+venv/
+
+# 파이썬 캐시
+__pycache__/
+*.py[cod]
+
+# 환경 변수 파일
+.env
+
+# 모델 체크포인트
+ckpt/
+policy-impl-classifier/
+
+# 편의상 빌드/로그 파일 등
+*.log
