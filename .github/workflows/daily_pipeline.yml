@@ -1,61 +1,37 @@
-name: Daily News Classification & Aggregation
+name: Daily News Pipeline
 
-# 한국시간(KST) 매일 09:40 → UTC 0:40
 on:
   schedule:
-    - cron: '40 0 * * *'
+    - cron: '20 2 * * *'   # KST 11:20
 
 jobs:
   daily-pipeline:
     runs-on: ubuntu-latest
+
+    container:
+      image: docker.io/sanghoon20/pledge-classifier:latest
+      credentials:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
     env:
-      # MySQL (MILESTONE) 정보
-      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PWD:  ${{ secrets.MYSQL_PASSWORD}}
-      MYSQL_DB:   ${{ secrets.MYSQL_DB }}
-      # Postgres (news, classification, pledge_steps, pledge_status)
-      POSTGRES_HOST:    ${{ secrets.POSTGRES_HOST }}
-      POSTGRES_PORT:    ${{ secrets.POSTGRES_PORT }}
-      POSTGRES_USER:    ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD:     ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_DB:      ${{ secrets.POSTGRES_DB }}
+      MYSQL_HOST:     ${{ secrets.MYSQL_HOST }}
+      MYSQL_PORT:     ${{ secrets.MYSQL_PORT }}
+      MYSQL_USER:     ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_DB:       ${{ secrets.MYSQL_DB }}
+      POSTGRES_HOST:  ${{ secrets.POSTGRES_HOST }}
+      POSTGRES_PORT:  ${{ secrets.POSTGRES_PORT }}
+      POSTGRES_USER:  ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD:   ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB:    ${{ secrets.POSTGRES_DB }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
       - name: Sync Milestones MySQL→Postgres
-        run: |
-          source .venv/bin/activate
-          python sync_milestones.py
+        run: python sync_milestones.py
 
       - name: Classify News
-        run: |
-          source .venv/bin/activate
-          python scripts/classify_news.py --batch_size 500
+        run: python classification.py --batch_size 500
 
       - name: Aggregate & Update Pledge Status
-        run: |
-          source .venv/bin/activate
-          python scripts/aggregate_and_update.py
-
-      # (선택) 4) Slack/Webhook으로 결과 알림
-      #- name: Notify Slack
-      #  run: |
-      #    source .venv/bin/activate
-      #    python scripts/notify_slack.py
-
+        run: python aggregate_and_update.py
