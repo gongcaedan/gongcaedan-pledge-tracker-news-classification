@@ -25,12 +25,13 @@ def classify_text(text: str) -> dict:
         logits = outputs.logits
         probs = torch.softmax(logits, dim=1).squeeze().tolist()
         pred_idx = int(torch.argmax(logits, dim=1).item())
-    label = model.config.id2label[pred_idx]
+
+    label = model.config.id2label[pred_idx]      # e.g. "LABEL_2"  
     confidence = probs[pred_idx]
     return {"label": label, "confidence": confidence}
 
 
-def save_classification(news_id: int, result: dict):
+def save_classification(news_id: int, step_id: int, label: str, confidence: float):
     """
     분류 결과를 news_classification 테이블에 저장
     """
@@ -38,11 +39,16 @@ def save_classification(news_id: int, result: dict):
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO news_classification (news_id, label, confidence)
-        VALUES (%s, %s, %s)
+        INSERT INTO news_classification
+          (news_id, step_id, label, confidence)
+        VALUES
+          (%s,      %s,      %s,    %s)
         """,
-        (news_id, result["label"], result["confidence"])
+        (news_id, step_id, label, confidence)
     )
     conn.commit()
     cur.close()
     conn.close()
+
+
+

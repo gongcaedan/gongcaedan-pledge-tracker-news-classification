@@ -19,21 +19,28 @@ def get_pg_conn():
     )
 
 # 라벨링 되지 않은 뉴스 가져오기
-def fetch_unlabeled_news(limit=500):
+def fetch_unlabeled_news(batch_size: int):
     """
-    아직 Silver(또는 Gold) 테이블에 저장된 적 없는 최신 뉴스 가져오기
+    news_silver 에 있는 step_id별로,
+    아직 news_classification에 없는 기사  batch_size개를 가져옴
+    반환 형식: List[(news_id, step_id, title, description)]
     """
     conn = get_pg_conn()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, title, description
-                FROM news
-                WHERE id NOT IN (
-                    SELECT news_id FROM news_silver
-                )
-                ORDER BY pub_date DESC
-                LIMIT %s
-    """, (limit,))
+    SELECT ns.news_id,
+           ns.step_id,
+           n.title,
+           n.description
+    FROM news_silver ns
+    JOIN news n 
+      ON ns.news_id = n.id
+    LEFT JOIN news_classification nc
+      ON ns.news_id = nc.news_id
+     AND ns.step_id = nc.step_id
+    WHERE nc.news_id IS NULL
+    LIMIT %s;
+    """, (batch_size,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
